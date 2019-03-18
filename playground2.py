@@ -44,7 +44,8 @@ def main(filename, batch_size, num_epochs):
     batch = tf.train.batch([serialized_example], batch_size=batch_size)
     parsed_batch = tf.parse_example(batch, features={
         'audio': tf.VarLenFeature(dtype=tf.float32),
-        'pitch': tf.FixedLenFeature([1], dtype=tf.int64)
+        'pitch': tf.FixedLenFeature([1], dtype=tf.int64),
+        'velocity': tf.FixedLenFeature([1], dtype=tf.int64)
     })
 
     with tf.Session() as sess:
@@ -53,6 +54,7 @@ def main(filename, batch_size, num_epochs):
         try:
             while True:
                 data_batch = sess.run(parsed_batch)
+                # print(data_batch['audio'].values)
                 print(data_batch)
                 # data process
                 break
