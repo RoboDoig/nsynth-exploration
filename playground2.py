@@ -1,39 +1,13 @@
 import tensorflow as tf
 import tensorflow.contrib as tfc
 import numpy as np
+import matplotlib.pyplot as plt
+import sounddevice as sd
+
 
 # path to tfrecord test file
 tfrecord_filename = 'C:/Users/erski/Documents/NSynth/nsynth-test.tfrecord'
-
-
-def decode(serialized_example):
-    features = tf.parse_single_example(
-        serialized_example,
-        features={
-            'audio': tf.VarLenFeature(dtype=tf.float32),
-            'pitch': tf.FixedLenFeature([1], dtype=tf.int64)
-        }
-    )
-
-    audio = tf.cast(features['audio'], tf.float32)
-    pitch = tf.cast(features['pitch'], tf.int64)
-    return audio, pitch
-
-
-def inputs(filename, batch_size, num_epochs):
-    with tf.name_scope('input'):
-        dataset = tf.data.TFRecordDataset(filename)
-
-        dataset.map(decode)
-
-        dataset = dataset.shuffle(1000 + 3 * batch_size)
-
-        dataset = dataset.repeat(num_epochs)
-        dataset = dataset.batch(batch_size)
-
-        iterator = dataset.make_one_shot_iterator()
-
-    return iterator.get_next()
+fs = 16000
 
 
 def main(filename, batch_size, num_epochs):
@@ -43,9 +17,10 @@ def main(filename, batch_size, num_epochs):
 
     batch = tf.train.batch([serialized_example], batch_size=batch_size)
     parsed_batch = tf.parse_example(batch, features={
-        'audio': tf.VarLenFeature(dtype=tf.float32),
+        'audio': tf.FixedLenFeature([64000], dtype=tf.float32),
         'pitch': tf.FixedLenFeature([1], dtype=tf.int64),
-        'velocity': tf.FixedLenFeature([1], dtype=tf.int64)
+        'velocity': tf.FixedLenFeature([1], dtype=tf.int64),
+        'instrument_str': tf.VarLenFeature(dtype=tf.string)
     })
 
     with tf.Session() as sess:
@@ -54,13 +29,13 @@ def main(filename, batch_size, num_epochs):
         try:
             while True:
                 data_batch = sess.run(parsed_batch)
-                # print(data_batch['audio'].values)
-                print(data_batch)
+                print(data_batch['instrument_str'].values, data_batch['pitch'], data_batch['audio'][0])
+                sd.play(data_batch['audio'][0], fs, blocking=True)
                 # data process
-                break
+
         except tf.errors.OutOfRangeError:
             print('out of range')
 
 
-main(tfrecord_filename, 100, 1)
+main(tfrecord_filename, 1, 1)
 
